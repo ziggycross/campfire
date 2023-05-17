@@ -8,16 +8,19 @@ void processInput(GLFWwindow *window);
 
 const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;"
+    "out vec4 vertexColor;\n"
     "void main()\n"
     "{\n"
     "    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
+    "    vertexColor = vec4(aPos.x+0.5, aPos.y+0.5, 0.5, 1.0);\n"
     "}\n";
 
 const char *fragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
+    "uniform vec4 ourColor;\n"
     "void main()\n"
     "{\n"
-    "    FragColor = vec4(0.5f, 0.5f, 0.5, 1.0f);\n"
+    "    FragColor = ourColor;\n"
     "}\n";
 
 
@@ -152,9 +155,17 @@ int main()
         // Render commands
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+        glUseProgram(shaderProgram);
+
+        // Update values
+        float timeValue = glfwGetTime();
+        float redValue = (sin(timeValue) / 2.0f) + 0.5f;
+        float greenValue = (sin(timeValue+1) / 2.0f) + 0.5f;
+        float blueValue = (sin(timeValue+2) / 2.0f) + 0.5f;
+        int vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+        glUniform4f(vertexColorLocation, redValue, greenValue, blueValue, 1.0f);
         
         // Draw
-        glUseProgram(shaderProgram);
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
         
