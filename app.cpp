@@ -8,19 +8,20 @@ void processInput(GLFWwindow *window);
 
 const char *vertexShaderSource = "#version 330 core\n"
     "layout (location = 0) in vec3 aPos;"
+    "layout (location = 1) in vec3 aColor;"
     "out vec4 vertexColor;\n"
     "void main()\n"
     "{\n"
-    "    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);\n"
-    "    vertexColor = vec4(aPos.x+0.5, aPos.y+0.5, 0.5, 1.0);\n"
+    "    gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0f);\n"
+    "    vertexColor = vec4(aColor, 1.0f);\n"
     "}\n";
 
 const char *fragmentShaderSource = "#version 330 core\n"
     "out vec4 FragColor;\n"
-    "uniform vec4 ourColor;\n"
+    "in vec4 vertexColor;\n"
     "void main()\n"
     "{\n"
-    "    FragColor = ourColor;\n"
+    "    FragColor = vertexColor;\n"
     "}\n";
 
 
@@ -103,10 +104,11 @@ int main()
     
     // Geometry
     float vertices[] = {
-         0.5f,  0.5f, 0.0f,
-         0.5f, -0.5f, 0.0f,
-        -0.5f,  0.5f, 0.0f,
-        -0.5f, -0.5f, 0.0f
+        // Positions(3)     // Colors(3)
+         0.5f,  0.5f, 0.0f, 1.0f, 1.0f, 0.0f,
+         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f,
+        -0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 1.0f,
+        -0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 1.0f
     };
     unsigned int indices[] = {
         0, 1, 2,
@@ -136,8 +138,10 @@ int main()
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
     // Configure vertex attributes
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3* sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     // Unbind buffer and array
     glBindBuffer(GL_ARRAY_BUFFER, 0);
