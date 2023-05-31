@@ -59,6 +59,7 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
     int width, height, nrChannels;
+    stbi_set_flip_vertically_on_load(true);
     unsigned char *data = stbi_load("./textures/favs/grass_block_side.png", &width, &height, &nrChannels, 0);
     if (data) 
     {
@@ -75,10 +76,10 @@ int main()
     // Geometry
     float vertices[] = {
         // Positions(3)     // Colors(3)        // UV Coords(2)
-         0.5f,  0.5f, 0.0f, 1.0f, 1.0f, 0.0f,   1.0f, 0.0f,
-         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f,   1.0f, 1.0f,
-        -0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 1.0f,   0.0f, 0.0f,
-        -0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 1.0f,   0.0f, 1.0f
+         0.5f,  0.5f, 0.0f, 1.0f, 1.0f, 0.0f,   1.0f, 1.0f,
+         0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f,   1.0f, 0.0f,
+        -0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 1.0f,   0.0f, 1.0f,
+        -0.5f, -0.5f, 0.0f, 1.0f, 1.0f, 1.0f,   0.0f, 0.0f
     };
     unsigned int indices[] = {
         0, 1, 2,
