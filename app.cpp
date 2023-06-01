@@ -13,6 +13,7 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
+void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 // const char *vertexShaderSource = ;
 
@@ -25,6 +26,10 @@ glm::vec3 cameraUp      = glm::vec3(0.0f, 1.0f,  0.0f);
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+
+float pitch = 0.0f, yaw = -90.0f;
+float lastX = 400, lastY = 300;
+bool firstMouse = true;
 
 int main()
 {   
@@ -45,6 +50,8 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetCursorPosCallback(window, mouse_callback);
 
     // Init GLAD
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -184,14 +191,16 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         shader1.use();
         
-        // Create transforms
-        glm::mat4 model      = glm::mat4(1.0f);
+        // Camera view
         glm::mat4 view;
-        glm::mat4 projection = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
         view = glm::lookAt(cameraPos,
                            cameraPos+cameraFront,
                            cameraUp);
+
+        // Create transforms
+        glm::mat4 model      = glm::mat4(1.0f);
+        glm::mat4 projection = glm::mat4(1.0f);
+        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
         projection = glm::perspective(glm::radians(45.0f), (float)width/(float)height, 0.1f, 100.0f);
         
         // Send transforms to shader
@@ -251,4 +260,36 @@ void processInput(GLFWwindow *window)
         cameraPos += cameraSpeed * cameraUp;
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) // Down
         cameraPos -= cameraSpeed * cameraUp;
+}
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+    
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
+
+    const float sensitivity = 0.15f;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw   += xoffset;
+    pitch += yoffset;
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    else if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 direction;
+    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(direction);
 }
