@@ -15,26 +15,25 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
-// const char *vertexShaderSource = ;
-
-// const char *fragmentShaderSource = ;
-
-// Camera init
+// Camera initialisation
 glm::vec3 cameraPos     = glm::vec3(0.0f, 0.0f,  3.0f);
 glm::vec3 cameraFront   = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp      = glm::vec3(0.0f, 1.0f,  0.0f);
-
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
-
 float pitch = 0.0f, yaw = -90.0f;
+
+// Mouse initialisation
 float lastX = 400, lastY = 300;
 bool firstMouse = true;
 
+// Frame timing
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+// Render dimensions
 unsigned int RENDER_SIZE_X = 400, RENDER_SIZE_Y = 300;
 unsigned int WINDOW_SIZE_X = 800, WINDOW_SIZE_Y = 600;
 
-// Quad object that fills whole screen
+// Quad object that fills whole screen, for use with render textures
 float fullscreenQuad[] = {
     // positions   // texCoords
      1.0f, -1.0f,  1.0f, 0.0f,
@@ -46,16 +45,77 @@ float fullscreenQuad[] = {
     -1.0f,  1.0f,  0.0f, 1.0f
 };
 
+// Cube Geometry
+float vertices[] = {
+    // Positions(3)       // UV Coords(2)
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+};
+
+// Cube Instances
+glm::vec3 geomPositions[] = {
+    glm::vec3( 0.0f,  0.0f,  0.0f), 
+    glm::vec3(-1.7f,  3.0f, -7.5f),  
+    glm::vec3( 1.5f,  2.0f, -2.5f), 
+    glm::vec3( 2.0f,  5.0f, -15.0f), 
+    glm::vec3( 1.3f, -2.0f, -2.5f),  
+    glm::vec3(-3.8f, -2.0f, -12.3f),  
+    glm::vec3( 1.5f,  0.2f, -1.5f), 
+    glm::vec3(-1.5f, -2.2f, -2.5f),  
+    glm::vec3( 2.4f, -0.4f, -3.5f),  
+    glm::vec3(-1.3f,  1.0f, -1.5f)  
+};
+
+// Main window
 int main()
 {   
-    // Set GLFW Settings
+    // Initialise GLFW and hint settings
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Enable this for Mac OS X compatibility
 
-    // Create OpenGL Window
+    // Create OpenGL window
     GLFWwindow* window = glfwCreateWindow(WINDOW_SIZE_X/2, WINDOW_SIZE_Y/2, "Campfire", NULL, NULL);
     if(window == NULL)
     {
@@ -64,11 +124,13 @@ int main()
         return -1;
     }
     glfwMakeContextCurrent(window);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    
+    // Attach callbacks
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    // glfwSetCursorPosCallback(window, mouse_callback);
+    glfwSetCursorPosCallback(window, mouse_callback);
 
-    // Init GLAD
+    // Initialise GLAD
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -79,10 +141,7 @@ int main()
     Shader shader1("vertex1.glsl", "fragment1.glsl");
     Shader screenShader("screenshader_v.glsl", "screenshader_f.glsl");
 
-    // Enable depth buffer
-    glEnable(GL_DEPTH_TEST);
-    
-    // Load textures
+    // Create texture
     unsigned int texture;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
@@ -91,6 +150,7 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
+    // Load texture from file
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true);
     unsigned char *data = stbi_load("./textures/favs/grass_block_side.png", &width, &height, &nrChannels, 0);
@@ -103,82 +163,19 @@ int main()
     {
         std::cout << "Failed to load texture" << std::endl;
     }
+    stbi_image_free(data); // Free image memory
 
-    stbi_image_free(data);
-
-    // Geometry
-    float vertices[] = {
-        // Positions(3)       // UV Coords(2)
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-         0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-         0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-        -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-        -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-    };
-
-    // Instances
-    glm::vec3 geomPositions[] = {
-        glm::vec3( 0.0f,  0.0f,  0.0f), 
-        glm::vec3(-1.7f,  3.0f, -7.5f),  
-        glm::vec3( 1.5f,  2.0f, -2.5f), 
-        glm::vec3( 2.0f,  5.0f, -15.0f), 
-        glm::vec3( 1.3f, -2.0f, -2.5f),  
-        glm::vec3(-3.8f, -2.0f, -12.3f),  
-        glm::vec3( 1.5f,  0.2f, -1.5f), 
-        glm::vec3(-1.5f, -2.2f, -2.5f),  
-        glm::vec3( 2.4f, -0.4f, -3.5f),  
-        glm::vec3(-1.3f,  1.0f, -1.5f)  
-    };
-
-    // 'Vertex Array Object' - stores VBOs
-    unsigned int VAO;
-    glGenVertexArrays(1, &VAO);
+    // Create vertex array and buffer objects
+    unsigned int VAO, VBO;
+    glGenVertexArrays(1, &VAO); // Stores vertex buffers
+    glGenBuffers(1, &VBO); // Stores vertices on GPU
     
-    // 'Vertex Buffer Object' - stores vertices on GPU memory
-    unsigned int VBO;
-    glGenBuffers(1, &VBO);
-
-    // 'Frame Buffer Object' - render to this and scale up to window size to create pixelation effect
+    // Create and bind frame buffer object
     unsigned int FBO;
-    glGenFramebuffers(1, &FBO);
+    glGenFramebuffers(1, &FBO); // We will render to this and then use it as a texture for our fullscreen quad
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
 
+    // Create frame buffer texture and attach to FBO
     unsigned int framebufferTexture;
     glGenTextures(1, &framebufferTexture);
     glBindTexture(GL_TEXTURE_2D, framebufferTexture);
@@ -191,7 +188,7 @@ int main()
 
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0);
 
-    // Render buffer
+    // Create render buffer
     unsigned int RBO;
     glGenRenderbuffers(1, &RBO);
     glBindRenderbuffer(GL_RENDERBUFFER, RBO);
@@ -321,6 +318,7 @@ void processInput(GLFWwindow *window)
     // Close program
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
+    
     // Movement
     const float cameraSpeed = 2.5f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // Forwards
