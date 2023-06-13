@@ -31,6 +31,21 @@ float pitch = 0.0f, yaw = -90.0f;
 float lastX = 400, lastY = 300;
 bool firstMouse = true;
 
+unsigned int RENDER_SIZE_X = 400, RENDER_SIZE_Y = 300;
+unsigned int WINDOW_SIZE_X = 800, WINDOW_SIZE_Y = 600;
+
+// Quad object that fills whole screen
+float fullscreenQuad[] = {
+    // positions   // texCoords
+     1.0f, -1.0f,  1.0f, 0.0f,
+    -1.0f, -1.0f,  0.0f, 0.0f,
+    -1.0f,  1.0f,  0.0f, 1.0f,
+
+     1.0f,  1.0f,  1.0f, 1.0f,
+     1.0f, -1.0f,  1.0f, 0.0f,
+    -1.0f,  1.0f,  0.0f, 1.0f
+};
+
 int main()
 {   
     // Set GLFW Settings
@@ -41,7 +56,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
     // Create OpenGL Window
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Campfire", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(WINDOW_SIZE_X/2, WINDOW_SIZE_Y/2, "Campfire", NULL, NULL);
     if(window == NULL)
     {
         std::cout << "Failed to create a window" << std::endl;
@@ -50,8 +65,8 @@ int main()
     }
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetCursorPosCallback(window, mouse_callback);
+    // glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    // glfwSetCursorPosCallback(window, mouse_callback);
 
     // Init GLAD
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
@@ -62,6 +77,10 @@ int main()
 
     //  Load shaders
     Shader shader1("vertex1.glsl", "fragment1.glsl");
+    Shader screenShader("screenshader_v.glsl", "screenshader_f.glsl");
+
+    // Enable depth buffer
+    glEnable(GL_DEPTH_TEST);
     
     // Load textures
     unsigned int texture;
@@ -155,25 +174,65 @@ int main()
     unsigned int VBO;
     glGenBuffers(1, &VBO);
 
+    // 'Frame Buffer Object' - render to this and scale up to window size to create pixelation effect
+    unsigned int FBO;
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+
+    unsigned int framebufferTexture;
+    glGenTextures(1, &framebufferTexture);
+    glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, RENDER_SIZE_X, RENDER_SIZE_Y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, framebufferTexture, 0);
+
+    // Render buffer
+    unsigned int RBO;
+    glGenRenderbuffers(1, &RBO);
+    glRenderbufferStorage(GL_READ_BUFFER, GL_DEPTH24_STENCIL8, RENDER_SIZE_X, RENDER_SIZE_Y);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
+
+    auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::FRAMEBUFFER::" << fboStatus << std::endl;
+
     // Bind vertext array
     glBindVertexArray(VAO);
     
-    // Bind buffer and add geometry
+    // Bind vertex buffer and add geometry
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
     // Configure vertex position attribute
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
+
     // Configure vertex UV coord attribute
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3* sizeof(float)));
     glEnableVertexAttribArray(1);
 
+    // Screen quad
+    unsigned int quadVAO, quadVBO;
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(fullscreenQuad), &fullscreenQuad, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0); // Set position
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1); // Set UV coords
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+
+    screenShader.use();
+    glUniform1i(glGetUniformLocation(screenShader.ID, "screenTexture"), 0);
+
     // Set to wireframe mode
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-    // Enable depth buffer
-    glEnable(GL_DEPTH_TEST);
 
     // Render loop
     while(!glfwWindowShouldClose(window))
@@ -186,9 +245,14 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
         
+        // Low-res buffer
+        glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+        glViewport(0, 0, RENDER_SIZE_X, RENDER_SIZE_Y);
+        
         // Render commands
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
         shader1.use();
         
         // Camera view
@@ -223,6 +287,15 @@ int main()
             shader1.setMat4("model", model);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
+
+        // Render framebuffer to screen
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glViewport(0, 0, WINDOW_SIZE_X, WINDOW_SIZE_Y);
+        screenShader.use();
+        glBindVertexArray(quadVAO);
+        glDisable(GL_DEPTH_TEST);
+        glBindTexture(GL_TEXTURE_2D, framebufferTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
         
         // Swapp buffers and call events
         glfwSwapBuffers(window);
@@ -237,7 +310,8 @@ int main()
 // Setup window resizing
 void framebuffer_size_callback(GLFWwindow* window, int width, int height)
 {
-    glViewport(0, 0, width, height);
+    WINDOW_SIZE_X = width;
+    WINDOW_SIZE_Y = height;
 }
 
 // Setup inputs
