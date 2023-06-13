@@ -194,7 +194,8 @@ int main()
     // Render buffer
     unsigned int RBO;
     glGenRenderbuffers(1, &RBO);
-    glRenderbufferStorage(GL_READ_BUFFER, GL_DEPTH24_STENCIL8, RENDER_SIZE_X, RENDER_SIZE_Y);
+    glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, RENDER_SIZE_X, RENDER_SIZE_Y);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, RBO);
 
     auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
