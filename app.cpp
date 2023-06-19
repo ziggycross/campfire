@@ -13,6 +13,7 @@
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 
 // Camera initialisation
@@ -24,6 +25,7 @@ float pitch = 0.0f, yaw = -90.0f;
 // Mouse initialisation
 float lastX = 400, lastY = 300;
 bool firstMouse = true;
+bool mouseActive = false;
 
 // Frame timing
 float deltaTime = 0.0f;
@@ -128,6 +130,7 @@ int main()
     
     // Attach callbacks
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+    glfwSetKeyCallback(window, key_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
 
     // Initialise GLAD
@@ -242,6 +245,12 @@ int main()
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+
+        // Enable moouse
+        if (!mouseActive)
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        else
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         
         // Low-res buffer
         glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -318,7 +327,11 @@ void processInput(GLFWwindow *window)
     // Close program
     if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
-    
+
+    // Disable movement if mouse not active
+    if (!mouseActive)
+        return;
+
     // Movement
     const float cameraSpeed = 2.5f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) // Forwards
@@ -335,8 +348,20 @@ void processInput(GLFWwindow *window)
         cameraPos -= cameraSpeed * cameraUp;
 }
 
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    if (key == GLFW_KEY_SPACE && action == GLFW_PRESS)
+    {
+        mouseActive = !mouseActive;
+        firstMouse = true;
+    }
+}
+
 void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 {
+    if (!mouseActive)
+        return;
+    
     if (firstMouse)
     {
         lastX = xpos;
