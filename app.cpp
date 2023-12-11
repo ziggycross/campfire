@@ -1,14 +1,19 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
 #include "shader.h"
+#include "model.h"
+#include "mesh.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+#include <string>
+#include <vector>
 #include <iostream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
@@ -32,7 +37,7 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 // Render dimensions
-unsigned int RENDER_SIZE_X = 400, RENDER_SIZE_Y = 300;
+unsigned int RENDER_SIZE_X = 360, RENDER_SIZE_Y = 270;
 unsigned int WINDOW_SIZE_X = 800, WINDOW_SIZE_Y = 600;
 
 // Quad object that fills whole screen, for use with render textures
@@ -47,66 +52,6 @@ float fullscreenQuad[] = {
     -1.0f,  1.0f,  0.0f, 1.0f
 };
 
-// Cube Geometry
-float vertices[] = {
-    // Positions(3)       // UV Coords(2)
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-     0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
-};
-
-// Cube Instances
-glm::vec3 geomPositions[] = {
-    glm::vec3( 0.0f,  0.0f,  0.0f), 
-    glm::vec3(-1.7f,  3.0f, -7.5f),  
-    glm::vec3( 1.5f,  2.0f, -2.5f), 
-    glm::vec3( 2.0f,  5.0f, -15.0f), 
-    glm::vec3( 1.3f, -2.0f, -2.5f),  
-    glm::vec3(-3.8f, -2.0f, -12.3f),  
-    glm::vec3( 1.5f,  0.2f, -1.5f), 
-    glm::vec3(-1.5f, -2.2f, -2.5f),  
-    glm::vec3( 2.4f, -0.4f, -3.5f),  
-    glm::vec3(-1.3f,  1.0f, -1.5f)  
-};
-
 // Main window
 int main()
 {   
@@ -115,7 +60,10 @@ int main()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    
+#ifdef __APPLE__
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Enable this for Mac OS X compatibility
+#endif
 
     // Create OpenGL window
     GLFWwindow* window = glfwCreateWindow(WINDOW_SIZE_X/2, WINDOW_SIZE_Y/2, "Campfire", NULL, NULL);
@@ -140,39 +88,13 @@ int main()
         return -1;
     }
 
-    //  Load shaders
+    // Load shaders
     Shader shader1("vertex1.glsl", "fragment1.glsl");
     Shader screenShader("screenshader_v.glsl", "screenshader_f.glsl");
 
-    // Create texture
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    // Load models
+    Model testModel(filesystem::path("resources/models/mario-kart/F2_Item_Kart_Mario_S.dae"));
 
-    // Load texture from file
-    int width, height, nrChannels;
-    stbi_set_flip_vertically_on_load(true);
-    unsigned char *data = stbi_load("./textures/favs/grass_block_side.png", &width, &height, &nrChannels, 0);
-    if (data) 
-    {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else
-    {
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    stbi_image_free(data); // Free image memory
-
-    // Create vertex array and buffer objects
-    unsigned int VAO, VBO;
-    glGenVertexArrays(1, &VAO); // Stores vertex buffers
-    glGenBuffers(1, &VBO); // Stores vertices on GPU
-    
     // Create and bind frame buffer object
     unsigned int FBO;
     glGenFramebuffers(1, &FBO); // We will render to this and then use it as a texture for our fullscreen quad
@@ -201,21 +123,6 @@ int main()
     auto fboStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
     if (fboStatus != GL_FRAMEBUFFER_COMPLETE)
         std::cout << "ERROR::FRAMEBUFFER::" << fboStatus << std::endl;
-
-    // Bind vertext array
-    glBindVertexArray(VAO);
-    
-    // Bind vertex buffer and add geometry
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    // Configure vertex position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    // Configure vertex UV coord attribute
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3* sizeof(float)));
-    glEnableVertexAttribArray(1);
 
     // Screen quad
     unsigned int quadVAO, quadVBO;
@@ -246,7 +153,7 @@ int main()
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        // Enable moouse
+        // Enable mouse
         if (!mouseActive)
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
         else
@@ -271,8 +178,8 @@ int main()
         // Create transforms
         glm::mat4 model      = glm::mat4(1.0f);
         glm::mat4 projection = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 1.0f, 0.0f));
-        projection = glm::perspective(glm::radians(45.0f), (float)width/(float)height, 0.1f, 100.0f);
+        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, -1.0f, 0.0f));
+        projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_SIZE_X/(float)WINDOW_SIZE_Y, 0.1f, 100.0f);
         
         // Send transforms to shader
         int modelLoc = glGetUniformLocation(shader1.ID, "model");
@@ -281,19 +188,9 @@ int main()
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         int projectionLoc = glGetUniformLocation(shader1.ID, "projection");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-        
-        // Draw
-        glBindTexture(GL_TEXTURE_2D, texture);
-        glBindVertexArray(VAO);
-        for(unsigned int i = 0; i <10; i++)
-        {
-            glm::mat4 model = glm::mat4(1.0f);
-            model = glm::translate(model, geomPositions[i]);
-            float angle = 20.0f * i;
-            model = glm::rotate(model, glm::radians(angle), glm::vec3(1.0f, 0.3f, 0.5f));
-            shader1.setMat4("model", model);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
+
+        testModel.Draw(shader1);
+        // testModel.Draw(shader1);
 
         // Render framebuffer to screen
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -304,7 +201,7 @@ int main()
         glBindTexture(GL_TEXTURE_2D, framebufferTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         
-        // Swapp buffers and call events
+        // Swap buffers and call events
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
