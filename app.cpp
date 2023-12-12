@@ -5,9 +5,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include <OpenImageIO/imageio.h>
+#include <OpenImageIO/strutil.h>
+
 #include "shader.h"
 #include "model.h"
 #include "mesh.h"
+#include "write.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -141,7 +145,7 @@ int main()
 
     // Set to wireframe mode
     // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+    
     // Render loop
     while(!glfwWindowShouldClose(window))
     {
@@ -205,6 +209,26 @@ int main()
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // Bind FBO
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    
+    // Create buffer and read in FBO pixels
+    unsigned char pixels[RENDER_SIZE_X*RENDER_SIZE_Y*4];
+    glReadPixels(0,0,RENDER_SIZE_X, RENDER_SIZE_Y, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+    
+    // Output using OIIO (needs to flip due to OpenGL's bottom up datatype)
+    std::string filename = "output.png";
+    OIIO::ImageSpec spec(RENDER_SIZE_X, RENDER_SIZE_Y, 4, TypeDesc::UINT8);
+    int scanlinesize = RENDER_SIZE_X * 4 * sizeof(pixels[0]);
+    unique_ptr<ImageOutput> out = ImageOutput::create(filename);
+    out->open(filename, spec);
+    out->write_image(TypeDesc::UINT8,
+                     (char *)pixels+(RENDER_SIZE_Y-1)*scanlinesize,
+                     AutoStride,
+                     -scanlinesize,
+                     AutoStride);
+    out->close();
 
     // Clear GLFW and end program
     glfwTerminate();
