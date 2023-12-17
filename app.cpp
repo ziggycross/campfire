@@ -93,8 +93,8 @@ int main()
     }
 
     // Load shaders
-    Shader shader1("vertex1.glsl", "fragment1.glsl");
-    Shader screenShader("screenshader_v.glsl", "screenshader_f.glsl");
+    Shader shader1("shader.vert", "shader.frag");
+    Shader screenShader("screenshader.vert", "screenshader.frag");
 
     // Load models
     Model testModel(filesystem::path("resources/models/mario-kart/F2_Item_Kart_Mario_S.dae"));
