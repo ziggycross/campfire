@@ -6,12 +6,13 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include <OpenImageIO/imageio.h>
+#include <OpenImageIO/imagebuf.h>
 #include <OpenImageIO/strutil.h>
 
 #include "shader.h"
 #include "model.h"
 #include "mesh.h"
-#include "write.h"
+
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -20,10 +21,13 @@
 #include <vector>
 #include <iostream>
 
+using namespace OIIO;
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+void writeImage(GLuint FBO, const std::string& filename);
 
 // Camera initialisation
 glm::vec3 cameraPos     = glm::vec3(0.0f, 0.0f,  3.0f);
@@ -108,7 +112,7 @@ int main()
     unsigned int framebufferTexture;
     glGenTextures(1, &framebufferTexture);
     glBindTexture(GL_TEXTURE_2D, framebufferTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, RENDER_SIZE_X, RENDER_SIZE_Y, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, RENDER_SIZE_X, RENDER_SIZE_Y, 0, GL_RGBA, GL_UNSIGNED_BYTE, NULL);
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
@@ -143,9 +147,6 @@ int main()
     screenShader.use();
     glUniform1i(glGetUniformLocation(screenShader.ID, "screenTexture"), 0);
 
-    // Set to wireframe mode
-    // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    
     // Render loop
     while(!glfwWindowShouldClose(window))
     {
@@ -168,7 +169,7 @@ int main()
         glViewport(0, 0, RENDER_SIZE_X, RENDER_SIZE_Y);
         
         // Render commands
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
         shader1.use();
@@ -194,7 +195,6 @@ int main()
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
         testModel.Draw(shader1);
-        // testModel.Draw(shader1);
 
         // Render framebuffer to screen
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -210,25 +210,8 @@ int main()
         glfwPollEvents();
     }
 
-    // Bind FBO
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-    
-    // Create buffer and read in FBO pixels
-    unsigned char pixels[RENDER_SIZE_X*RENDER_SIZE_Y*4];
-    glReadPixels(0,0,RENDER_SIZE_X, RENDER_SIZE_Y, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-    
-    // Output using OIIO (needs to flip due to OpenGL's bottom up datatype)
-    std::string filename = "output.png";
-    OIIO::ImageSpec spec(RENDER_SIZE_X, RENDER_SIZE_Y, 4, TypeDesc::UINT8);
-    int scanlinesize = RENDER_SIZE_X * 4 * sizeof(pixels[0]);
-    unique_ptr<ImageOutput> out = ImageOutput::create(filename);
-    out->open(filename, spec);
-    out->write_image(TypeDesc::UINT8,
-                     (char *)pixels+(RENDER_SIZE_Y-1)*scanlinesize,
-                     AutoStride,
-                     -scanlinesize,
-                     AutoStride);
-    out->close();
+    // Write final frame to file
+    writeImage(FBO, "out.png");
 
     // Clear GLFW and end program
     glfwTerminate();
@@ -311,4 +294,21 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
     cameraFront = glm::normalize(direction);
+}
+
+void writeImage(GLuint FBO, const std::string& filename) {
+    // Create array to hold pixel data
+    unsigned char pixels[RENDER_SIZE_X*RENDER_SIZE_Y*4];
+    
+    // Bind FBO and read to array
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glReadPixels(0, 0, RENDER_SIZE_X, RENDER_SIZE_Y, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+ 
+    // Calculate scanline size
+    int scanlinesize = RENDER_SIZE_X*4*sizeof(char);
+
+    // Write to file using OIIO
+    ImageSpec spec(RENDER_SIZE_X, RENDER_SIZE_Y, 4, TypeDesc::UINT8);
+    ImageBuf buf(spec, (char *)pixels+(RENDER_SIZE_Y -1)*scanlinesize, AutoStride, -scanlinesize, AutoStride);
+    buf.write(filename);
 }
