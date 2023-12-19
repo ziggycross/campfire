@@ -1,4 +1,7 @@
+*.DS_Store
 .vscode
 resources
 app*
+*.ini
 *.png
+*.gif

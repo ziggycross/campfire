@@ -1,9 +1,14 @@
 #include <glad/glad.h>
+
 #include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#include <imgui/imgui.h>
+#include <imgui/imgui_impl_glfw.h>
+#include <imgui/imgui_impl_opengl3.h>
 
 #include <OpenImageIO/imageio.h>
 #include <OpenImageIO/imagebuf.h>
@@ -13,7 +18,6 @@
 #include "model.h"
 #include "mesh.h"
 
-
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -21,13 +25,11 @@
 #include <vector>
 #include <iostream>
 
-using namespace OIIO;
-
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void writeImage(GLuint FBO, const std::string& filename);
+void writeFrame(GLuint FBO, const std::string& filename);
 
 // Camera initialisation
 glm::vec3 cameraPos     = glm::vec3(0.0f, 0.0f,  3.0f);
@@ -39,6 +41,10 @@ float pitch = 0.0f, yaw = -90.0f;
 float lastX = 400, lastY = 300;
 bool firstMouse = true;
 bool mouseActive = false;
+
+// UI settings
+bool spinning = false;
+std::string filename = "out.png";
 
 // Frame timing
 float deltaTime = 0.0f;
@@ -147,6 +153,14 @@ int main()
     screenShader.use();
     glUniform1i(glGetUniformLocation(screenShader.ID, "screenTexture"), 0);
 
+    // Setup imgui version
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    ImGui::StyleColorsDark();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 330");
+
     // Render loop
     while(!glfwWindowShouldClose(window))
     {
@@ -173,6 +187,10 @@ int main()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
         shader1.use();
+
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
         
         // Camera view
         glm::mat4 view;
@@ -183,7 +201,9 @@ int main()
         // Create transforms
         glm::mat4 model      = glm::mat4(1.0f);
         glm::mat4 projection = glm::mat4(1.0f);
-        model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, -1.0f, 0.0f));
+        if (spinning) {
+            model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, -1.0f, 0.0f));
+        }
         projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_SIZE_X/(float)WINDOW_SIZE_Y, 0.1f, 100.0f);
         
         // Send transforms to shader
@@ -204,14 +224,25 @@ int main()
         glDisable(GL_DEPTH_TEST);
         glBindTexture(GL_TEXTURE_2D, framebufferTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        ImGui::Begin("Export");
+        ImGui::Checkbox("Spin", &spinning);
+        if (ImGui::Button("Render")) {
+            writeFrame(FBO, filename);
+        }
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         
         // Swap buffers and call events
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    // Write final frame to file
-    writeImage(FBO, "out.png");
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     // Clear GLFW and end program
     glfwTerminate();
@@ -296,9 +327,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     cameraFront = glm::normalize(direction);
 }
 
-void writeImage(GLuint FBO, const std::string& filename) {
+void writeFrame(GLuint FBO, const std::string& filename) {
     // Create array to hold pixel data
-    unsigned char pixels[RENDER_SIZE_X*RENDER_SIZE_Y*4];
+    unsigned char pixels[RENDER_SIZE_X*RENDER_SIZE_Y*4]; // 4 channels for RGBA
     
     // Bind FBO and read to array
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
@@ -308,7 +339,36 @@ void writeImage(GLuint FBO, const std::string& filename) {
     int scanlinesize = RENDER_SIZE_X*4*sizeof(char);
 
     // Write to file using OIIO
-    ImageSpec spec(RENDER_SIZE_X, RENDER_SIZE_Y, 4, TypeDesc::UINT8);
-    ImageBuf buf(spec, (char *)pixels+(RENDER_SIZE_Y -1)*scanlinesize, AutoStride, -scanlinesize, AutoStride);
+    OIIO::ImageSpec spec(RENDER_SIZE_X, RENDER_SIZE_Y, 4, OIIO::TypeDesc::UINT8);
+    OIIO::ImageBuf buf(spec, (char *)pixels+(RENDER_SIZE_Y -1)*scanlinesize, OIIO::AutoStride, -scanlinesize, OIIO::AutoStride);
     buf.write(filename);
 }
+
+// void writeAnimation(GLuint FBO, const std::string& filename) {
+//     const char *filename = "foo.tif";
+//     // int nsubimages;     // assume this is set
+//     // OIIO::ImageSpec specs[];  // assume these are set for each subimage
+//     // unsigned char *pixels[]; // assume a buffer for each subimage
+
+//     // Create the ImageOutput
+//     auto out = OIIO::ImageOutput::create (filename);
+
+//     // Be sure we can support subimages
+//     if (nsubimages > 1 &&  (! out->supports("multiimage") ||
+//                         ! out->supports("appendsubimage"))) {
+//         std::cerr << "Does not support appending of subimages\n";
+//         return;
+//     }
+
+//     // Use Create mode for the first level.
+//     OIIO::ImageOutput::OpenMode appendmode = OIIO::ImageOutput::Create;
+
+//     // Write the individual subimages
+//     for (int s = 0;  s < nsubimages;  ++s) {
+//         out->open (filename, specs[s], appendmode);
+//         out->write_image (OIIO::TypeDesc::UINT8, pixels[s]);
+//         // Use AppendSubimage mode for subsequent levels
+//         appendmode = OIIO::ImageOutput::AppendSubimage;
+//     }
+//     out->close ();
+// }
