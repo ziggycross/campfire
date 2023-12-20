@@ -4,6 +4,10 @@
 Campfire is a project for me to learn OpenGL and foundational computer graphics concepts.  
 I was inspired by "3D pixel art" renderers online and am aiming to make something similar.  
 
+![campfire-example](https://github.com/ziggycross/campfire/assets/112720016/2fc19859-8be5-469e-ba80-3ef74dbf5e88)
+
+*Model: [Space Ame Camping](https://skfb.ly/o7Jww) by Seafoam (381 KB)*
+
 ## Roadmap
 
 - [x] Basic rendering
@@ -11,12 +15,15 @@ I was inspired by "3D pixel art" renderers online and am aiming to make somethin
 - [x] Model texturing
 - [x] Render still frame
 - [x] Render animation
-- [ ] Settings toolbar
-- [ ] Headless mode
+- [x] Basic GUI
+- [ ] Improved shader
+- [ ] Native animated GIF support
+- [ ] Particle rendering
 - [ ] Grass rendering
 - [ ] Water rendering
 - [ ] Fire rendering
 - [ ] Foliage rendering
+- [ ] Headless mode
 
 ## User guide
 
