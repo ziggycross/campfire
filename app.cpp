@@ -17,6 +17,7 @@
 #include "shader.h"
 #include "model.h"
 #include "mesh.h"
+#include "renderer.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -24,18 +25,24 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <sstream>
+#include <iomanip>
 
+// Window + Controls
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void processInput(GLFWwindow *window);
 void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
+
+// Rendering
 void writeFrame(GLuint FBO, const std::string& filename);
+void renderSpin(const int numFrames, GLuint FBO, const std::string& filename);
 
 // Camera initialisation
 glm::vec3 cameraPos     = glm::vec3(0.0f, 0.0f,  3.0f);
 glm::vec3 cameraFront   = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp      = glm::vec3(0.0f, 1.0f,  0.0f);
-float pitch = 0.0f, yaw = -90.0f;
+float pitch = 0.0f, yaw = -90.0f, fov = 45.0f;
 
 // Mouse initialisation
 float lastX = 400, lastY = 300;
@@ -44,7 +51,7 @@ bool mouseActive = false;
 
 // UI settings
 bool spinning = false;
-std::string filename = "out.png";
+std::string filename = "output/test.png";
 
 // Frame timing
 float deltaTime = 0.0f;
@@ -107,7 +114,7 @@ int main()
     Shader screenShader("screenshader.vert", "screenshader.frag");
 
     // Load models
-    Model testModel(filesystem::path("resources/models/mario-kart/F2_Item_Kart_Mario_S.dae"));
+    Model testModel(filesystem::path("resources/models/space-ame-camping-amelia-watson-hololive/spaceamesketchfab2.obj"));
 
     // Create and bind frame buffer object
     unsigned int FBO;
@@ -161,6 +168,8 @@ int main()
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
+    Renderer renderer(shader1, testModel, FBO, filename, RENDER_SIZE_X, RENDER_SIZE_Y);
+
     // Render loop
     while(!glfwWindowShouldClose(window))
     {
@@ -204,7 +213,7 @@ int main()
         if (spinning) {
             model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, -1.0f, 0.0f));
         }
-        projection = glm::perspective(glm::radians(45.0f), (float)WINDOW_SIZE_X/(float)WINDOW_SIZE_Y, 0.1f, 100.0f);
+        projection = glm::perspective(glm::radians(fov), (float)WINDOW_SIZE_X/(float)WINDOW_SIZE_Y, 0.1f, 100.0f);
         
         // Send transforms to shader
         int modelLoc = glGetUniformLocation(shader1.ID, "model");
@@ -228,7 +237,7 @@ int main()
         ImGui::Begin("Export");
         ImGui::Checkbox("Spin", &spinning);
         if (ImGui::Button("Render")) {
-            writeFrame(FBO, filename);
+            renderer.renderSpin(48, filename);
         }
         ImGui::End();
 
